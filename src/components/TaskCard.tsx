@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Task } from "../utils/data-tasks";
 
 const lowPriorityIcon = (
@@ -58,10 +59,13 @@ const highPriorityIcon = (
 const TaskCard = ({
   task,
   updateTaskPoints,
+  updateTaskTitle,
 }: {
   task: Task;
   updateTaskPoints: (task: Task, points: number) => void;
+  updateTaskTitle: (task: Task, title: string) => void;
 }) => {
+  const [isEditingTitle, setEditingTitle] = useState(false);
   const points = task.points || 0;
   const updatePoints = (direction: "up" | "down") => {
     const fib = [0, 1, 2, 3, 5, 8, 13];
@@ -74,7 +78,20 @@ const TaskCard = ({
   };
   return (
     <div className="px-2 m-2 border rounded-lg w-52 bg-gray-50">
-      <div className="py-2 text-base font-base font">{task.title}</div>
+      <div className="py-2 text-base font-base">
+        {isEditingTitle ? (
+          <input
+            autoFocus
+            className="w-full"
+            onBlur={() => setEditingTitle(false)}
+            value={task.title}
+            onChange={(e) => updateTaskTitle(task, e.target.value)}
+          />
+        ) : (
+          <div onClick={() => setEditingTitle(true)}>{task.title}</div>
+        )}
+      </div>
+
       <div className="flex justify-between gap-4 py-2 text-sm text-gray-500">
         <div className="flex gap-2">
           <div>{task.id}</div>
