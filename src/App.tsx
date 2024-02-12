@@ -1,51 +1,80 @@
-import { useState } from "react";
-import TaskCard from "./components/TaskCard";
+import { useEffect, useState } from "react";
 
-import { tasks as initialTasks, statuses, Task } from "./utils/data-tasks";
+import TaskCard from "./components/TaskCard";
+import { Status, statuses, Task } from "./utils/data-tasks";
 
 function App() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const columns = statuses.map((status) => {
     const tasksInColumn = tasks.filter((task) => task.status === status);
     return {
-      title: status,
+      status,
       tasks: tasksInColumn,
     };
   });
 
-  const updateTaskPoints = (task: Task, points: number) => {
+  useEffect(() => {
+    fetch("http://localhost:3000/tasks")
+      .then((res) => res.json())
+      .then((data) => {
+        setTasks(data);
+      });
+  }, []);
+
+  const updateTask = (task: Task) => {
+    fetch(`http://localhost:3000/tasks/${task.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(task),
+    });
     const updatedTasks = tasks.map((t) => {
-      return t.id === task.id ? { ...t, points: points } : t;
+      return t.id === task.id ? task : t;
     });
     setTasks(updatedTasks);
   };
 
-  const updateTaskTitle = (task: Task, title: string) => {
-    const updateTasks = tasks.map((t) => {
-      return t.id === task.id ? { ...t, title: title } : t;
-    });
-    setTasks(updateTasks);
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, status: Status) => {
+    e.preventDefault();
+    setCurrentlyHoveringOver(null);
+    const id = e.dataTransfer.getData("id");
+    const task = tasks.find((task) => task.id === id);
+    if (task) {
+      updateTask({ ...task, status });
+    }
+  };
+
+  const [currentlyHoveringOver, setCurrentlyHoveringOver] =
+    useState<Status | null>(null);
+  const handleDragEnter = (status: Status) => {
+    setCurrentlyHoveringOver(status);
   };
 
   return (
     <div className="flex divide-x">
       {columns.map((column) => (
-        <div>
+        <div
+          onDrop={(e) => handleDrop(e, column.status)}
+          onDragOver={(e) => e.preventDefault()}
+          onDragEnter={() => handleDragEnter(column.status)}
+        >
           <div className="flex justify-between p-2 text-3xl font-bold text-gray-500">
-            <h2 className="capitalize">{column.title}</h2>
-
+            <h2 className="capitalize">{column.status}</h2>
             {column.tasks.reduce(
               (total, task) => total + (task?.points || 0),
               0
             )}
           </div>
-          {column.tasks.map((task) => (
-            <TaskCard
-              task={task}
-              updateTaskPoints={updateTaskPoints}
-              updateTaskTitle={updateTaskTitle}
-            />
-          ))}
+          <div
+            className={`h-full ${
+              currentlyHoveringOver === column.status ? "bg-gray-200" : ""
+            }`}
+          >
+            {column.tasks.map((task) => (
+              <TaskCard task={task} updateTask={updateTask} />
+            ))}
+          </div>
         </div>
       ))}
     </div>
